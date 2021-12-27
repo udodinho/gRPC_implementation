@@ -23,7 +23,8 @@ func main() {
 	//fmt.Printf("Created client: %f", c)
 	//doUnary(c)
 	//doServerStreaming(c)
-	doClientStreaming(c)
+	//doClientStreaming(c)
+	doBiDiStreaming(c)
 }
 
 func doUnary(c greetpb.GreetServiceClient) {
@@ -112,4 +113,79 @@ func doClientStreaming(c greetpb.GreetServiceClient) {
 		log.Fatalf("Error while receiving response from LongGreet: %v", err)
 	}
 	fmt.Printf("LongGreet Response: %v\n", res)
+}
+
+func doBiDiStreaming(c greetpb.GreetServiceClient) {
+	fmt.Println("Starting to do a BiDi Streaming RPC...")
+
+	// We create a stream by invoking the client (go routine)
+	stream, err := c.GreetEveryOne(context.Background())
+	if err != nil {
+		log.Fatalf("Error while creating stream %v", err)
+		return
+	}
+
+	request := []*greetpb.GreetEveryOneRequest{
+		&greetpb.GreetEveryOneRequest{
+			Greeting: &greetpb.Greeting{
+				FirstName: "Udodinho",
+			},
+		},
+		&greetpb.GreetEveryOneRequest{
+			Greeting: &greetpb.Greeting{
+				FirstName: "Jane",
+			},
+		},
+		&greetpb.GreetEveryOneRequest{
+			Greeting: &greetpb.Greeting{
+				FirstName: "Frank",
+			},
+		},
+		&greetpb.GreetEveryOneRequest{
+			Greeting: &greetpb.Greeting{
+				FirstName: "Lucy",
+			},
+		},
+		&greetpb.GreetEveryOneRequest{
+			Greeting: &greetpb.Greeting{
+				FirstName: "Ken",
+			},
+		},
+	}
+
+	waitc := make(chan struct{})
+
+	// We send a bunch of messages to the client (go routine)
+	go func() {
+		// Function to send a bunch of messages
+		for _, req := range request {
+			fmt.Printf("Sending message: %v\n", req)
+			stream.Send(req)
+			time.Sleep(1000 * time.Millisecond)
+		}
+		err := stream.CloseSend()
+		if err != nil {
+			log.Fatalf("Error while closing request %v", err)
+		}
+	}()
+
+	// We receive a bunch of messages from the client (go routine)
+	go func() {
+		// Function to receive a bunch of  messages
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("Error while receiving %v", err)
+				break
+			}
+			fmt.Printf("Received: %v\n", res.GetResult())
+		}
+		close(waitc)
+	}()
+
+	// Block until everything is done
+	<-waitc
 }
