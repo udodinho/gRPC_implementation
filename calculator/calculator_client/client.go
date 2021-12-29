@@ -145,7 +145,7 @@ func doErrorCall(c calculatorpb.CalculatorServiceClient, n int32) {
 		respErr, ok := status.FromError(err)
 		if ok {
 			// Actual error from gRPC(user error)
-			fmt.Println(respErr.Message())
+			fmt.Printf("Error message from server: %v\n", respErr.Message())
 			fmt.Println(respErr.Code())
 			if respErr.Code() == codes.InvalidArgument {
 				fmt.Println("We probably sent a negative number!")
