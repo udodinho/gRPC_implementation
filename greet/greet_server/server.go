@@ -58,7 +58,6 @@ func (*server) LongGreet(stream greetpb.GreetService_LongGreetServer) error {
 		firstName := req.GetGreeting().GetFirstName()
 		result += firstName + "! "
 	}
-
 }
 
 func (*server) GreetEveryOne(stream greetpb.GreetService_GreetEveryOneServer) error {
@@ -84,7 +83,6 @@ func (*server) GreetEveryOne(stream greetpb.GreetService_GreetEveryOneServer) er
 			return sendErr
 		}
 	}
-
 }
 
 func (*server) GreetWithDeadline(ctx context.Context, req *greetpb.GreetWithDeadlineRequest) (*greetpb.GreetWithDeadlineResponse, error) {
