@@ -88,6 +88,46 @@ func (*server) ReadBlog(ctx context.Context, request *blogpb.ReadBlogRequest) (*
 	}, nil
 }
 
+func dataToBlogpb(data *blogItem) *blogpb.Blog {
+	return &blogpb.Blog{
+		Id:       data.ID.Hex(),
+		AuthorId: data.AuthorID,
+		Content:  data.Content,
+		Title:    data.Title,
+	}
+}
+
+func (s *server) UpdateBlog(ctx context.Context, request *blogpb.UpdateBlogRequest) (*blogpb.UpdateBlogResponse, error) {
+	fmt.Println("Update blog request")
+
+	blog := request.GetBlog()
+	oid, err := primitive.ObjectIDFromHex(blog.GetId())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Cannot parse ID")
+	}
+
+	data := &blogItem{}
+	filter := primitive.M{"_id": oid}
+
+	res := collection.FindOne(context.Background(), filter)
+	if err := res.Decode(data); err != nil {
+		return nil, status.Errorf(codes.NotFound, "Cannot find blog with specified ID: %v", err)
+	}
+
+	data.AuthorID = blog.GetAuthorId()
+	data.Content = blog.GetContent()
+	data.Title = blog.GetTitle()
+
+	_, updateErr := collection.ReplaceOne(context.Background(), filter, data)
+	if updateErr != nil {
+		return nil, status.Errorf(codes.Internal, "Cannot update object in MongoDB : %v", updateErr.Error())
+	}
+
+	return &blogpb.UpdateBlogResponse{
+		Blog: dataToBlogpb(data),
+	}, nil
+}
+
 func main() {
 	// If we crash the go code,we get the file name and line number
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
