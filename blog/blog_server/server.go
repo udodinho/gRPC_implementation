@@ -151,6 +151,33 @@ func (s *server) DeleteBlog(ctx context.Context, request *blogpb.DeleteBlogReque
 
 }
 
+func (*server) ListBlog(req *blogpb.ListBlogRequest, stream blogpb.BlogService_ListBlogServer) error {
+	fmt.Println("List blog request")
+
+	curr, err := collection.Find(context.Background(), primitive.D{{}})
+	if err != nil {
+		return status.Errorf(codes.Internal, "Unknown internal error: %v", err.Error())
+	}
+
+	defer curr.Close(context.Background())
+
+	for curr.Next(context.Background()) {
+		data := &blogItem{}
+		err := curr.Decode(data)
+		if err != nil {
+			return status.Errorf(codes.Internal, "Error while decoding data from MongoDB: %v", err.Error())
+		}
+
+		stream.Send(&blogpb.ListBlogResponse{Blog: dataToBlogpb(data)})
+	}
+
+	if err := curr.Err(); err != nil {
+		return status.Errorf(codes.Internal, "Error while iterating data from MongoDB: %v", err.Error())
+	}
+
+	return nil
+}
+
 func main() {
 	// If we crash the go code,we get the file name and line number
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
